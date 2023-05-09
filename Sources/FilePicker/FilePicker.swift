@@ -34,11 +34,11 @@ public struct FilePicker<LabelView: View>: View {
     public let types: [UTType]
     public let allowMultiple: Bool
     public let beforeAction: (() async -> Void)?
-    public let afterPresented: (() -> Void)?
+    public let afterPresented: (() async -> Void)?
     public let pickedCompletionHandler: PickedURLsCompletionHandler
     public let labelViewContent: LabelViewContent
     
-    public init(types: [UTType], allowMultiple: Bool, beforeAction: (() async -> Void)? = nil, afterPresented: (() -> Void)?, onPicked completionHandler: @escaping PickedURLsCompletionHandler, @ViewBuilder label labelViewContent: @escaping LabelViewContent) {
+    public init(types: [UTType], allowMultiple: Bool, beforeAction: (() async -> Void)? = nil, afterPresented: (() async -> Void)?, onPicked completionHandler: @escaping PickedURLsCompletionHandler, @ViewBuilder label labelViewContent: @escaping LabelViewContent) {
         self.types = types
         self.allowMultiple = allowMultiple
         self.beforeAction = beforeAction
@@ -47,7 +47,7 @@ public struct FilePicker<LabelView: View>: View {
         self.labelViewContent = labelViewContent
     }
 
-    public init(types: [UTType], allowMultiple: Bool, title: String, beforeAction: (() async -> Void)? = nil, afterPresented: (() -> Void)? = nil, onPicked completionHandler: @escaping PickedURLsCompletionHandler) where LabelView == Text {
+    public init(types: [UTType], allowMultiple: Bool, title: String, beforeAction: (() async -> Void)? = nil, afterPresented: (() async -> Void)? = nil, onPicked completionHandler: @escaping PickedURLsCompletionHandler) where LabelView == Text {
         self.init(types: types, allowMultiple: allowMultiple, beforeAction: beforeAction, afterPresented: afterPresented, onPicked: completionHandler) { Text(title) }
     }
     
@@ -73,7 +73,9 @@ public struct FilePicker<LabelView: View>: View {
         }
         .onChange(of: isPresented) { [wasPresented = isPresented] isPresented in
             if !isPresented && wasPresented, let afterPresented = afterPresented {
-                afterPresented()
+                Task { @MainActor in
+                    await afterPresented()
+                }
             }
         }
     }
