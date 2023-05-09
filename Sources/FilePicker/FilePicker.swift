@@ -26,7 +26,6 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 public struct FilePicker<LabelView: View>: View {
-    
     public typealias PickedURLsCompletionHandler = (_ urls: [URL]) -> Void
     public typealias LabelViewContent = () -> LabelView
     
@@ -34,18 +33,20 @@ public struct FilePicker<LabelView: View>: View {
     
     public let types: [UTType]
     public let allowMultiple: Bool
+    public let beforeAction: (() async -> Void)?
     public let pickedCompletionHandler: PickedURLsCompletionHandler
     public let labelViewContent: LabelViewContent
     
-    public init(types: [UTType], allowMultiple: Bool, onPicked completionHandler: @escaping PickedURLsCompletionHandler, @ViewBuilder label labelViewContent: @escaping LabelViewContent) {
+    public init(types: [UTType], allowMultiple: Bool, beforeAction: (() async -> Void)? = nil, onPicked completionHandler: @escaping PickedURLsCompletionHandler, @ViewBuilder label labelViewContent: @escaping LabelViewContent) {
         self.types = types
         self.allowMultiple = allowMultiple
+        self.beforeAction = beforeAction
         self.pickedCompletionHandler = completionHandler
         self.labelViewContent = labelViewContent
     }
 
-    public init(types: [UTType], allowMultiple: Bool, title: String, onPicked completionHandler: @escaping PickedURLsCompletionHandler) where LabelView == Text {
-        self.init(types: types, allowMultiple: allowMultiple, onPicked: completionHandler) { Text(title) }
+    public init(types: [UTType], allowMultiple: Bool, title: String, beforeAction: (() async -> Void)? = nil, onPicked completionHandler: @escaping PickedURLsCompletionHandler) where LabelView == Text {
+        self.init(types: types, allowMultiple: allowMultiple, beforeAction: beforeAction, onPicked: completionHandler) { Text(title) }
     }
     
     #if os(iOS)
@@ -53,7 +54,12 @@ public struct FilePicker<LabelView: View>: View {
     public var body: some View {
         Button(
             action: {
-                if !isPresented { isPresented = true }
+                if !isPresented {
+                    Task { @MainActor in
+                        await (beforeAction ?? { })()
+                        isPresented = true
+                    }
+                }
             },
             label: {
                 labelViewContent()
