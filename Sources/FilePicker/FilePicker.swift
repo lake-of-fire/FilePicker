@@ -34,19 +34,21 @@ public struct FilePicker<LabelView: View>: View {
     public let types: [UTType]
     public let allowMultiple: Bool
     public let beforeAction: (() async -> Void)?
+    public let afterPresented: (() -> Void)?
     public let pickedCompletionHandler: PickedURLsCompletionHandler
     public let labelViewContent: LabelViewContent
     
-    public init(types: [UTType], allowMultiple: Bool, beforeAction: (() async -> Void)? = nil, onPicked completionHandler: @escaping PickedURLsCompletionHandler, @ViewBuilder label labelViewContent: @escaping LabelViewContent) {
+    public init(types: [UTType], allowMultiple: Bool, beforeAction: (() async -> Void)? = nil, afterPresented: (() -> Void)?, onPicked completionHandler: @escaping PickedURLsCompletionHandler, @ViewBuilder label labelViewContent: @escaping LabelViewContent) {
         self.types = types
         self.allowMultiple = allowMultiple
         self.beforeAction = beforeAction
+        self.afterPresented = afterPresented
         self.pickedCompletionHandler = completionHandler
         self.labelViewContent = labelViewContent
     }
 
-    public init(types: [UTType], allowMultiple: Bool, title: String, beforeAction: (() async -> Void)? = nil, onPicked completionHandler: @escaping PickedURLsCompletionHandler) where LabelView == Text {
-        self.init(types: types, allowMultiple: allowMultiple, beforeAction: beforeAction, onPicked: completionHandler) { Text(title) }
+    public init(types: [UTType], allowMultiple: Bool, title: String, beforeAction: (() async -> Void)? = nil, afterPresented: (() -> Void)? = nil, onPicked completionHandler: @escaping PickedURLsCompletionHandler) where LabelView == Text {
+        self.init(types: types, allowMultiple: allowMultiple, beforeAction: beforeAction, afterPresented: afterPresented, onPicked: completionHandler) { Text(title) }
     }
     
     #if os(iOS)
@@ -68,6 +70,11 @@ public struct FilePicker<LabelView: View>: View {
         .disabled(isPresented)
         .sheet(isPresented: $isPresented) {
             FilePickerUIRepresentable(types: types, allowMultiple: allowMultiple, onPicked: pickedCompletionHandler)
+        }
+        .onChange(of: isPresented) { [wasPresented = isPresented] isPresented in
+            if !isPresented && wasPresented, let afterPresented = afterPresented {
+                afterPresented()
+            }
         }
     }
     
